@@ -62,4 +62,10 @@
     <string name="do_you_want_to_login_now">Do you want to login now?</string>
     <string name="upload_prediction">Upload prediction</string>
     <string name="delete_prediction">Delete prediction</string>
+    <string name="collaboration_details">This application was created in partnership with the U.S. Department‬ ‭ of Agriculture Food for Progress and TechnoServe’s Regrow Yirga Processing Program 2024.</string>
+    <string name="alert_msg_1">Alert: Coffee Cherry Not Fully Ripe! The app has detected a ripeness level below 80%. Coffee below 80% ripeness may result in lower-grade quality and may not be cost-effective. Harvest at optimal ripeness for the best brew! ☕️</string>
+    <string name="alert_msg_2">Its detected that the ripeness level is exceeding 95%, indicating the cherries are capable of producing high quality coffee and very economical</string>
+    <string name="alert_msg_3">The batch of cherries is low quality and could result in higher conversion ratio and impact the quality of the coffee</string>
+    <string name="total_detection">Total beans detected:</string>
+    <string name="show_detection">Show detections:</string>
 </resources>

@@ -43,9 +43,12 @@ import org.technoserve.cherieapp.ui.components.ButtonPrimary
 import kotlin.math.pow
 import android.content.Intent
 import android.view.MotionEvent
+import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -121,7 +124,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray,country:String) {
     var newId by remember { mutableStateOf(0) }
     val workManager: WorkManager = WorkManager.getInstance(context)
     val hasBeenScheduledForUpload = remember { mutableStateOf(false) }
-    val beanClassifier = remember { BeanClassifier(context) }
+    val beanClassifier = remember { BeanClassifier(context,country) }
     var ratingState by remember {
         mutableStateOf(0)
     }
@@ -147,15 +150,25 @@ fun PredictionScreen(imageAsByteArray: ByteArray,country:String) {
 
     var classPercentages by remember { mutableStateOf(listOf<Double>()) }
     var totalDetections by remember { mutableStateOf(0) }
+    var showMask by remember { mutableStateOf(true) }
     var resultImage by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(imageAsByteArray) {
         val bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
         val (processedImage, percentages, detections) = beanClassifier.processImage(bitmap)
-        resultImage = processedImage
-        classPercentages = percentages
-        totalDetections = detections
-        complete.value = true
+        // if detections < 1, show a toast with "No cherries detected"
+        if (detections < 1){
+            resultImage = processedImage
+            classPercentages = listOf<Double>(0.0,0.0,0.0)
+            complete.value = true
+            Toast.makeText(context, "No cherries detected", Toast.LENGTH_SHORT).show();
+        }else{
+            resultImage = processedImage
+            classPercentages = percentages
+            totalDetections = detections
+            complete.value = true
+        }
+
     }
 
     fun showStillRunningMessage() {
@@ -249,26 +262,52 @@ fun PredictionScreen(imageAsByteArray: ByteArray,country:String) {
                         .weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    Row (
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+
+                    ) {
+                        Text(stringResource(id = R.string.show_detection), color = Color.Black)
+                        showMask.let {
+                            Checkbox(
+                                checked = it,
+                                onCheckedChange = {
+                                    showMask = it
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = MaterialTheme.colors.primary,
+                                    uncheckedColor = MaterialTheme.colors.secondary
+                                )
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .weight(1f),
                     ) {
-                        resultImage?.let { image ->
-                            Image(
-                                bitmap = image.asImageBitmap(),
-                                contentDescription = "Processed Image",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(start = 32.dp, end = 32.dp)
-                            )
+                        showMask.let { shouldShowMask->
+
+                            resultImage?.let { image ->
+                                Image(
+                                    bitmap = if (shouldShowMask) image.asImageBitmap() else bitmap.asImageBitmap(),
+                                    contentDescription = "Processed Image",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(start = 32.dp, end = 32.dp)
+                                )
+                            }
+
                         }
+
+
                     }
                 }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "Total beans detected: $totalDetections",
+                    text = stringResource(id = R.string.total_detection)+" $totalDetections",
                     color = MaterialTheme.colors.primary,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
@@ -280,55 +319,29 @@ fun PredictionScreen(imageAsByteArray: ByteArray,country:String) {
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        modifier = Modifier
-                            .height(48.dp)
-                            .fillMaxWidth()
-//                            .padding(start = 60.dp)
-                    ) {
-                        Text(
-                            text = "${stringResource(id = R.string.underripe)}: ${classPercentages[2].toInt()}%",
-                            color = Color.Green,
-                            textAlign = TextAlign.Center,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "${stringResource(id = R.string.ripe)}: ${classPercentages[1].toInt()}%",
-                            color = Color.Blue,
-                            textAlign = TextAlign.Center,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "${stringResource(id = R.string.overripe)}: ${classPercentages[0].toInt()}%",
-                            color = Color.Red,
-//                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    classPercentages.let {
+                        CategoryIndicators(it)
                     }
                 }
-
-                Text(
-                    text = stringResource(id = R.string.rate_this_prediction),
-                    color = Color.Black,
-                    textAlign = TextAlign.Center,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
                 Spacer(modifier = Modifier.height(20.dp))
 
-                RatingBar(ratingState = ratingState, onStateChange = { newValue ->
-                    ratingState = newValue.toInt()
-                })
+                // Add the recommendation here
+                RipenessRecommendation(classPercentages)
 
+//                Text(
+//                    text = stringResource(id = R.string.rate_this_prediction),
+//                    color = Color.Black,
+//                    textAlign = TextAlign.Center,
+//                    fontSize = 14.sp,
+//                    fontWeight = FontWeight.Bold
+//                )
+//
+//                Spacer(modifier = Modifier.height(20.dp))
+//
+//                RatingBar(ratingState = ratingState, onStateChange = { newValue ->
+//                    ratingState = newValue.toInt()
+//                })
+//
                 Spacer(modifier = Modifier.height(20.dp))
 
                 ButtonPrimary(onClick = {
@@ -365,6 +378,79 @@ fun PredictionScreen(imageAsByteArray: ByteArray,country:String) {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+fun CategoryIndicators(classPercentages: List<Double>, white: Boolean = false) {
+
+// white bg box
+    Box(
+        Modifier.padding(15.dp).background(Color.White, shape = RoundedCornerShape(8.dp)).fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier
+                .height(48.dp)
+                .fillMaxWidth()
+//                            .padding(start = 60.dp)
+        ) {
+            Text(
+                text = "${stringResource(id = R.string.underripe)}: ${classPercentages[2].toInt()}%",
+                color = Color.Green,
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "${stringResource(id = R.string.ripe)}: ${classPercentages[1].toInt()}%",
+                color = Color.Blue,
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "${stringResource(id = R.string.overripe)}: ${classPercentages[0].toInt()}%",
+                color = Color.Red,
+//                            modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun RipenessRecommendation(classPercentages: List<Double>, white: Boolean = false) {
+    val ripePercentage = classPercentages[1]
+    val unripePercentage = classPercentages[2]
+
+    val message = when {
+        unripePercentage > 15 -> stringResource(id = R.string.alert_msg_3)
+        ripePercentage < 80 -> stringResource(id = R.string.alert_msg_1)
+        ripePercentage > 95 -> stringResource(id = R.string.alert_msg_2)
+
+        else -> return  // No recommendation needed
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(Color.Yellow.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.body1,
+            color = if (white) Color.White else Color.Black,
+        )
     }
 }
 

@@ -63,4 +63,10 @@
     <string name="do_you_want_to_login_now">አሁን መግባት ትፈልጋለህ?</string>
     <string name="upload_prediction">የሰቀላ ትንበያ</string>
     <string name="delete_prediction">ትንበያን ሰርዝ</string>
+    <string name="collaboration_details">ይህ መተግበሪያ የተፈጠረው ከዩኤስ የግብርና መምሪያ ምግብ ለሂደት እና የቴክኖሰርቭ የ Regrow Yirga Processing Program 2024 ጋር በመተባበር ነው።</string>
+    <string name="alert_msg_1">ማስታወሻ፡- የቡና ፍሬው ሙሉ ለሙሉ አልበሰለም!\\nየሞባይል አፑ ከ80% በታች የሆነ የብስለት ደረጃ አግኝቷል። ከ80% በታች የሆነ ቡና ዝቅተኛ ጥራት ያለው እና አዋጭ ላይሆን ይችላል።</string>
+    <string name="alert_msg_2">ማስታወሻ፡- ከ95% በላይ የበሰለ የቡና ፍሬ!\\nየሞባይል አፑ ከ95% በላይ የሆነ የብስለት ደረጃ አግኝቷል። ከ95% በላይ የበሰለ ቡና ከፍተኛ ጥራት ያለው እና በጣም አዋጭ ሊሆን ይችላል።</string>
+    <string name="alert_msg_3">የቡና ፍሬዎቹ ዝቅተኛ ጥራት ያላቸው ናቸው እና ይህ ከፍተኛ የለውጥ ምጥጥን ሊያስከትል እና የቡናውን ጥራት ሊጎዳ ይችላል።</string>
+    <string name="total_detection">የተገኘው ጠቅላላ ፍሬ፡-</string>
+    <string name="show_detection">ግኝቶችን አሳይ፡-</string>
 </resources>

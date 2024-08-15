@@ -23,6 +23,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 import android.graphics.RectF
+import androidx.compose.ui.text.toLowerCase
 import androidx.core.graphics.scale
 
 data class DetectResult(
@@ -62,6 +63,7 @@ fun nms(x: Tensor, threshold: Float): List<DetectResult> {
 
     val result = mutableListOf<DetectResult>()
     for (i in 0 until numElem) {
+
         if (selected_indices.contains(i)) {
             val box = boxes.slice((i*4) until (i*4)+4)
             val detection = DetectResult(boundingBox = RectF(box[0], box[1], box[2], box[3]), score = scores[i], classId = classes[i].toInt())
@@ -93,7 +95,6 @@ fun mergeCloseDetections(detections: List<Detection>, overlapThreshold: Float = 
 
     val sortedDetections = detections.sortedByDescending { it.score }
     val mergedDetections = mutableListOf<Detection>()
-
     for (detection in sortedDetections) {
         var shouldAdd = true
         for (mergedDetection in mergedDetections) {
@@ -173,6 +174,7 @@ fun Bitmap.resizeToMultipleOf128(padOrCrop: Boolean = true): Bitmap {
 }
 class BeanClassifier(
     private val context: Context,
+    private val country: String,
 //    classifierModelPath: String,
 //    detectModelPath: String
 ) {
@@ -182,8 +184,8 @@ class BeanClassifier(
 
     private val yoloModel: Module
     private val classifierModel: Module
-    private val imageSizeX = 512
-    private val imageSizeY = 512
+    private val imageSizeX = 1024
+    private val imageSizeY = 1024
     private val classNames = listOf("Overripe", "Ripe", "Underripe", "err")
     private val classColors = listOf(
         Color.rgb(255, 50, 50),
@@ -193,8 +195,12 @@ class BeanClassifier(
     )
 
     init {
-        yoloModel = Module.load(assetFilePath(context, "mobile_model_b4_nms.pt"))
-        classifierModel = Module.load(assetFilePath(context, "classifier.pt"))
+        val modelDir = File(context.filesDir, "model")
+//        val destDir = File(modelDir, )
+        val destDirClassifier = File(modelDir, country.lowercase()+"_"+"classifier.pt")
+        val destDirDetect = File(modelDir, country.lowercase()+"_"+"mobile_model_b4_nms.ptl")
+        yoloModel = Module.load(destDirDetect.absolutePath)
+        classifierModel = Module.load(destDirClassifier.absolutePath)
     }
 
     suspend fun processImage(_bitmap_: Bitmap): Triple<Bitmap, List<Double>, Int> = withContext(Dispatchers.Default) {
@@ -204,7 +210,7 @@ class BeanClassifier(
         var adjustedX = 0;
         var adjustedY = 0;
         var adjuste = false;
-        if((_bitmap_.width > 1280) || (_bitmap_.height > 1280)){
+        if((_bitmap_.width > 512) || (_bitmap_.height > 1280)){
             if (_bitmap_.width > _bitmap_.height){
                 val ratio=  _bitmap_.height.toFloat()/_bitmap_.width.toFloat();
 
@@ -220,10 +226,15 @@ class BeanClassifier(
 
         var _bitmap = if(adjuste) Bitmap.createScaledBitmap(_bitmap_, adjustedX, adjustedY, true) else _bitmap_
         _bitmap = _bitmap.resizeToMultipleOf128(false)
-        var detections =efficientMultiScaleDetection(_bitmap)
-        val preDetectionFilter= filterDetectionsBySize(detections)
-        val mergeCloseBoundarys = mergeCloseDetections(preDetectionFilter)
-        val filteredDetections = mergeCloseBoundarys.filter { it -> it.score > 0.05f}//.subList(0,50)
+//        _bitmap = _bitmap.scale(1024, 1024, false)
+        var x =efficientMultiScaleDetection(_bitmap)
+        x= filterDetectionsBySize(x)
+        x = mergeCloseDetections(x)
+        x = x.filter { it ->
+            (it.score > 0.05f)
+                    && (it.box.width() > 3f)
+                    && (it.box.height() > 3f)
+        }//.subList(0,50)
 
 
 
@@ -231,7 +242,7 @@ class BeanClassifier(
 
         var timeBeforePreprocessing = System.currentTimeMillis()
 
-        val preprocessedImages = filteredDetections.map { det ->
+        val preprocessedImages = x.map { det ->
 //            Log.d("BeanClassifier", "Detected box: ${det.box.left}, ${det.box.top}, ${det.box.width()}, ${det.box.height()}")
             async {
                 Triple(
@@ -249,7 +260,7 @@ class BeanClassifier(
 
 
 
-        val classificationResults = classifyBeans(preprocessedImages.map { it.first }, preprocessedImages.map { it.third })
+        val classificationResults = classifyBeans(preprocessedImages.map { it.first.second }, preprocessedImages.map { it.third })
 
         var timeBeforeDrawing = System.currentTimeMillis()
 
@@ -263,7 +274,7 @@ class BeanClassifier(
         Log.d("BeanClassifier", "Classification time: $classificationTimeMs ms")
         Log.d("BeanClassifier", "Drawing time: $drawingTimeMs ms")
         val classCounts = classificationResults.groupingBy { it }.eachCount()
-        val totalDetections = classificationResults.size.toDouble()
+        val totalDetections = classificationResults.count { cr->cr != 3  }
         val classPercentages = classNames.map { className ->
             (classCounts[classNames.indexOf(className)] ?: 0).toDouble() / totalDetections * 100
         }
@@ -319,15 +330,12 @@ class BeanClassifier(
     }
     private suspend fun efficientMultiScaleDetection(image: Bitmap): List<Detection> = withContext(Dispatchers.Default) {
         val scaleFactors = listOf<Float>(1.0f)
-        var minMaxWidth= min(image.width, image.height)
-        var halfMin= minMaxWidth/2
-//        var patch_sizes = findPatchSizes(image.width, image.height, 240).sortedBy { it.second }.first().first
 
-        var patch_sizes2 = findPatchSizes(image.width, image.height, minMaxWidth-1).sortedBy { it.second }.first().first
 
         val patchSizes = listOf(
 //            Triple(256, 256, 1),
             Triple(512, 512, 2),
+//            Triple(512, 512, 4),
 //            Triple(halfMin, halfMin, 1),
 //           Pair(patch_sizes2, patch_sizes2)
         )
@@ -350,6 +358,7 @@ class BeanClassifier(
                     detectOnImage(img, scale, 0, 0).map {
                         it->it.apply { it.score *= 0.2f }
                     }
+//                    (listOf<Detection>())
                 }
                 val patchDetections = patchSizes.flatMap { (patchHeight, patchWidth, divisor) ->
                     (0 until img.height step (patchHeight/divisor)).flatMap { i ->
@@ -389,13 +398,13 @@ class BeanClassifier(
         Log.d("BeanClassifier", "Input tensor shape: ${input.shape().contentToString()}")
         val ivv = IValue.from(input)
         Log.d("BeanClassifier", "Input tensor shape: ${ivv.toTensor().shape().contentToString()}")
-        var yoloOutput = yoloModel.forward(ivv, IValue.from(0.05));
+        var yoloOutput = yoloModel.forward(ivv, IValue.from(0.03));
         if (yoloOutput.isNull) {
             return emptyList()
         }
         val (_output, boxes, scores) =  yoloOutput.toTuple()
         var output = _output.toTensor();
-        var detResult = nms(output, 0.5f) // the 0.45 is IoU threshold
+        var detResult = nms(output, 0.35f) // the 0.45 is IoU threshold
 
 
         var scaleX = imageSizeX /  image.width.toFloat()  // 2.0
@@ -431,8 +440,8 @@ class BeanClassifier(
         val meanArea = areas.average().toFloat()
         val stdArea = sqrt(areas.map { (it - meanArea).pow(2) }.average()).toFloat()
 
-        val minArea = 400f
-        val maxSize = max(stdArea * stdThreshold, 30000f)
+        val minArea = 100f
+        val maxSize = 20000f
 
         return detections.filter { det ->
             val area = abs(det.box.width() * det.box.height())
@@ -443,25 +452,28 @@ class BeanClassifier(
         }
     }
 
-    private suspend fun preProcessClassifierInput(_bitmap: Bitmap, box: RectF, score: Float): Tensor = withContext(Dispatchers.Default) {
+    private suspend fun preProcessClassifierInput(_bitmap: Bitmap, box: RectF, score: Float): Pair<Bitmap,Tensor> = withContext(Dispatchers.Default) {
         val left = max(0f, box.left).toInt()
         val top = max(0f, box.top).toInt()
-        val width = min(_bitmap.width.toFloat(), box.width()).toInt()
-        val height = min(_bitmap.height.toFloat(), box.height()).toInt()
 
-//        Log.d("BeanClassifier", "Cropping bitmap: " +
-//                "$left, $top, $width, $height" +
-//                "-- ${bitmap.width}, ${bitmap.height}" +
-//                "-- ${box.left}, ${box.top}, ${box.width()}, ${box.height()}")
+        var right=left + box.width()
+        var bottom= top+box.height()
+        var _maxRight = min(_bitmap.width.toFloat(), right).toFloat()
+        var _maxBottom = min(_bitmap.height.toFloat(), bottom).toFloat()
+
+        val width = min(_bitmap.width.toFloat(), _maxRight - left).toInt()
+        val height = min(_bitmap.height.toFloat(), _maxBottom - top).toInt()
+
+
 
         var cutimg = Bitmap.createBitmap(_bitmap, left, top, width, height)
-        val resizedBitmap = cutimg.scale(128, 128, false)
+        val resizedBitmap = cutimg.scale(64, 64, false)
 
-         TensorImageUtils.bitmapToFloat32Tensor(
+         Pair(resizedBitmap,TensorImageUtils.bitmapToFloat32Tensor(
             resizedBitmap,
              floatArrayOf(0f, 0f, 0f),
              floatArrayOf(1f, 1f, 1f)
-        )
+        ))
     }
 
 //    private suspend fun classifyBatch(batch: List<Tensor>): Tensor = withContext(Dispatchers.Default){
@@ -487,6 +499,7 @@ class BeanClassifier(
             val outputEnd = outputStart + 4
             val outputSlice = outputData.sliceArray(outputStart until outputEnd)
             val maxIndex = outputSlice.indices.maxByOrNull { outputSlice[it] } ?: 0
+//            results.add(maxIndex)
             if (maxIndex == 3){
                 if (scoreItm >= 0.2f){
                     // find second max
@@ -511,7 +524,7 @@ class BeanClassifier(
 
 
 
-    private fun drawDetections(bitmap: Bitmap, detections: List<Pair<Triple<Tensor, RectF, Float>, Int>>): Bitmap {
+    private fun drawDetections(bitmap: Bitmap, detections: List<Pair<Triple<Pair<Bitmap,Tensor>, RectF, Float>, Int>>): Bitmap {
         val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(mutableBitmap)
         val paint = Paint().apply {

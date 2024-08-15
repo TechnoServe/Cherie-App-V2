@@ -184,7 +184,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     )
                 },
                 backgroundColor = MaterialTheme.colors.primary,
-                contentColor = Color.Black,
+                contentColor = Color.White,
                 navigationIcon = {
                     IconButton(onClick = {
                         val returnIntent = Intent()
@@ -249,38 +249,53 @@ fun SavedPredictionScreen(predictionId: Long) {
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    modifier = Modifier
-                        .height(48.dp)
-                        .fillMaxWidth()
-                ){
-                    Text(
-                        text = "${stringResource(id = R.string.underripe)}: ${item.underripe.toInt()}%",
-                        color = MaterialTheme.colors.onSurface,
-//                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontSize = 18.sp
+                CategoryIndicators(
+                    classPercentages = listOf(
+                        item.overripe.toDouble(),
+                        item.ripe.toDouble(),
+                        item.underripe.toDouble()
                     )
-                    Text(
-                        text = "${stringResource(id = R.string.ripe)}: ${item.ripe.toInt()}%",
-                        color = MaterialTheme.colors.onSurface,
-//                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        text = "${stringResource(id = R.string.overripe)}: ${item.overripe.toInt()}%",
-                        color = MaterialTheme.colors.onSurface,
-//                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontSize = 18.sp
-                    )
+                )
+//                Row(
+//                    verticalAlignment = Alignment.CenterVertically,
+//                    horizontalArrangement = Arrangement.SpaceAround,
+//                    modifier = Modifier
+//                        .height(48.dp)
+//                        .fillMaxWidth()
+//                ){
+//                    Text(
+//                        text = "${stringResource(id = R.string.underripe)}: ${item.underripe.toInt()}%",
+//                        color = MaterialTheme.colors.onSurface,
+////                        modifier = Modifier.fillMaxWidth(),
+//                        textAlign = TextAlign.Center,
+//                        fontSize = 18.sp
+//                    )
+//                    Text(
+//                        text = "${stringResource(id = R.string.ripe)}: ${item.ripe.toInt()}%",
+//                        color = MaterialTheme.colors.onSurface,
+////                        modifier = Modifier.fillMaxWidth(),
+//                        textAlign = TextAlign.Center,
+//                        fontSize = 18.sp
+//                    )
+//                    Text(
+//                        text = "${stringResource(id = R.string.overripe)}: ${item.overripe.toInt()}%",
+//                        color = MaterialTheme.colors.onSurface,
+////                        modifier = Modifier.fillMaxWidth(),
+//                        textAlign = TextAlign.Center,
+//                        fontSize = 18.sp
+//                    )
+//
+//                }
 
-                }
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(32.dp))
+                RipenessRecommendation(classPercentages = listOf(
+                    item.overripe.toDouble(),
+                    item.ripe.toDouble(),
+                    item.underripe.toDouble()
+                ), white=true)
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
                     modifier = Modifier

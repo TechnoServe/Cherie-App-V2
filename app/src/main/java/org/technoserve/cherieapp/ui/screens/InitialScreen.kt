@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,9 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme.typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +45,8 @@ import org.technoserve.cherieapp.R
 import org.technoserve.cherieapp.ui.navigation.NavigationItem
 import org.technoserve.cherieapp.workers.TAG
 import java.io.File
+import java.util.zip.ZipFile
+import kotlin.system.measureTimeMillis
 
 
 fun downloadModel(){
@@ -120,7 +125,7 @@ fun SelectCountry(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(screenHeight * 0.4f)
+//                    .height(screenHeight * 0.5f)
                     .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -166,36 +171,57 @@ fun SelectCountry(
                     Button(
                         onClick = {
                             downloading.value = true
-                            val modelRef =
-                                Firebase.storage.reference.child("models/${selected.value.lowercase()}.ptl")
-                            val modelFile = File(modelDir, "${selected.value.lowercase()}.ptl")
+                            val detectionModelRef =
+                                Firebase.storage.reference.child("models/${selected.value.lowercase()}/mobile_model_b4_nms.ptl")
+                            val classifierModelRef =
+                                Firebase.storage.reference.child("models/${selected.value.lowercase()}/classifier.pt")
+                            // create directory for model files
+//                            val mainModelDir = File(modelDir, "model")
+                            val detectionModelFile = File(modelDir, "${selected.value.lowercase()}_mobile_model_b4_nms.ptl")
+                            val classifierModelFile = File(modelDir, "${selected.value.lowercase()}_classifier.pt")
                             saveCountry(
                                 sharedPreferences,
                                 selected.value
                             );
-                            modelRef.downloadUrl.addOnSuccessListener {
-                                modelRef.getFile(modelFile).addOnSuccessListener {
 
-                                    Log.d("download test", "successfull :-)")
-                                    val modelPath = modelFile.absolutePath
-                                    Log.d("retrieve test", modelPath)
-                                    downloading.value = false
-                                    navController.navigate(NavigationItem.Inference.route)
-                                }.addOnFailureListener { exception ->
-                                    downloading.value = false
-                                    homeScope.launch {
-                                        scaffoldState.snackbarHostState.showSnackbar(
+                            var modelPaths = listOf(
+                                Pair(detectionModelRef, detectionModelFile),
+                                Pair(classifierModelRef, classifierModelFile)
+                            )
+
+                            var loaded_items = 0
+
+                            for (modelPath in modelPaths) {
+                                val modelRef = modelPath.first
+                                val modelFile = modelPath.second
+                                modelRef.downloadUrl.addOnSuccessListener {
+                                    modelRef.getFile(modelFile).addOnSuccessListener {
+                                        Log.d("download test", "successfull :-)")
+
+                                        val modelPath = modelFile.absolutePath
+                                        Log.d("retrieve test", modelPath)
+
+                                        loaded_items += 1
+                                        if (loaded_items == modelPaths.size) {
+                                            downloading.value = false
+                                            navController.navigate(NavigationItem.Inference.route)
+                                        }
+                                    }.addOnFailureListener { exception ->
+                                        downloading.value = false
+                                        homeScope.launch {
+                                            scaffoldState.snackbarHostState.showSnackbar(
+                                                exception.message ?: "Unkown error... download failed"
+                                            )
+                                        }
+                                        Log.d(
+                                            "download test",
                                             exception.message ?: "Unkown error... download failed"
                                         )
                                     }
-                                    Log.d(
-                                        "download test",
-                                        exception.message ?: "Unkown error... download failed"
-                                    )
-                                }
 
-                            }.addOnFailureListener {
-                                navController.navigate(NavigationItem.ChooseImage.route)
+                                }.addOnFailureListener {
+                                    navController.navigate(NavigationItem.ChooseImage.route)
+                                }
                             }
 
                         },
@@ -214,6 +240,15 @@ fun SelectCountry(
                             color = Color.White
                         )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(id = R.string.collaboration_details),
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center,
+                        color = Color.Black,
+                        style = typography.caption,
+                    )
+
                 }
 
             }

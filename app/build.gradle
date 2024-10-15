@@ -1,0 +1,134 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+
+}
+
+android {
+    signingConfigs {
+        def PATH_TO_KEYSTORE = System.getenv("PATH_TO_KEYSTORE")
+        def STORE_PASSWORD = System.getenv("STORE_PASSWORD")
+        def KEY_PASSWORD = System.getenv("KEY_PASSWORD")
+        def KEY_ALIAS = System.getenv("KEY_ALIAS")
+
+        release {
+            storeFile file("$PATH_TO_KEYSTORE")
+            storePassword "$STORE_PASSWORD"
+            keyPassword "$KEY_PASSWORD"
+            keyAlias "$KEY_ALIAS"
+        }
+    }
+    compileSdk 34
+    buildToolsVersion "31.0.0"
+
+    defaultConfig {
+        applicationId "org.technoserve.cherieapp"
+        minSdk 21
+        targetSdk 34
+        versionCode 6
+        versionName "1.6"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion compose_version
+        kotlinCompilerVersion '1.8.0'
+    }
+}
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all {
+        def appName = "Cherie"
+        def region = "All"
+        def date = new Date()
+        def formattedDate = date.format('MMM-dd-yyyy')
+        outputFileName = appName + "-" + region + "-"  + formattedDate + "-${variant.versionName}-${variant.versionCode}.apk"
+    }
+}
+
+dependencies {
+
+    implementation 'androidx.core:core-ktx:1.3.2'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.3.0'
+    implementation "androidx.compose.material:material-icons-extended:$compose_version"
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.material:material:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling:$compose_version"
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.4.1'
+    implementation 'androidx.activity:activity-compose:1.3.0-alpha06'
+    implementation "androidx.navigation:navigation-compose:2.4.0-alpha04"
+    implementation "com.google.accompanist:accompanist-permissions:0.14.0"
+    implementation "com.github.CanHub:Android-Image-Cropper:3.2.1"
+    implementation 'net.danlew:android.joda:2.10.9.1'
+    implementation("io.coil-kt:coil-compose:1.3.0")
+
+
+    implementation platform('com.google.firebase:firebase-bom:28.3.0')
+
+    // Declare the dependencies for the Crashlytics and Analytics libraries
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation 'com.google.firebase:firebase-crashlytics-ktx'
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+
+    implementation 'com.firebaseui:firebase-ui-auth:7.2.0'
+    implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-storage-ktx'
+    implementation 'com.google.firebase:firebase-firestore-ktx'
+
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+
+    def room_version = "2.5.2"
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.room:room-rxjava2:$room_version"
+    kapt "androidx.room:room-compiler:$room_version"
+
+    implementation "androidx.room:room-ktx:$room_version"
+
+    implementation "androidx.compose.runtime:runtime:$compose_version"
+    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
+    implementation "androidx.compose.runtime:runtime-rxjava2:$compose_version"
+
+    def work_version = "2.7.0"
+    implementation "androidx.work:work-runtime-ktx:$work_version"
+    implementation "androidx.work:work-gcm:$work_version"
+    implementation "androidx.work:work-multiprocess:$work_version"
+
+
+    def aws_version = "2.16.12"
+    implementation "com.amazonaws:aws-android-sdk-s3:$aws_version"
+    implementation "com.amazonaws:aws-android-sdk-mobile-client:$aws_version"
+
+    implementation 'org.pytorch:pytorch_android:1.13.1'
+    implementation 'org.pytorch:pytorch_android_torchvision:1.13.1'
+
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+}

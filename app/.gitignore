@@ -1,0 +1,4 @@
+/build
+**.apk
+/release/output-metadata.json
+/google-services.json

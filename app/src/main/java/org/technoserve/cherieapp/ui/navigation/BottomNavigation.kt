@@ -42,25 +42,18 @@ fun BottomNavigationBar(navController: NavController) {
                     alwaysShowLabel = true,
                     selected = currentRoute == item.route,
                     onClick = {
-                        navController.navigate(item.route) {
-                            // Pop up to the start destination of the graph to
-                            // avoid building up a large stack of destinations
-                            // on the back stack as users select items
-//                        navController.graph.startDestinationRoute?.let { route ->
-//                            popUpTo(route) {
-//                                saveState = true
-//                            }
-//                        }
-                            // Avoid multiple copies of the same destination when
-                            // reselecting the same item
-                            launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
+                        if (item.route == NavigationItem.Inference.route && currentRoute == item.route) {
+                            // Do nothing special here, the back press logic is handled by the BackHandler
+                        } else {
+                            navController.navigate(item.route) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+
                         }
                     }
                 )
             }
         }
     }
-
 }

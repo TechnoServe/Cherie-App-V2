@@ -49,6 +49,7 @@
     <string name="loading_saved_predictions">የተቀመጡ ትንበያዎችን በመጫን ላይ</string>
     <string name="no_saved_predictions">ምንም የተቀመጡ ትንበያዎች የሉም</string>
     <string name="downloading_model">ሞዴል በማውረድ ላይ</string>
+    <string name="Percentage_download_model">ማውረድ ፐርሰንት</string>
     <string name="prediction_deleted">ትንበያ ተሰርዟል።</string>
     <string name="undo">ቀልብስ</string>
     <string name="items_deleted">እቃዎች ተሰርዘዋል</string>

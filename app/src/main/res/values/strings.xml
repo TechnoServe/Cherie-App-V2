@@ -48,6 +48,7 @@
     <string name="loading_saved_predictions">Loading saved predictions</string>
     <string name="no_saved_predictions">No saved predictions</string>
     <string name="downloading_model">Downloading model</string>
+    <string name="Percentage_download_model">Download Percentage</string>
     <string name="prediction_deleted">Prediction Deleted</string>
     <string name="undo">Undo</string>
     <string name="items_deleted">Items Deleted</string>

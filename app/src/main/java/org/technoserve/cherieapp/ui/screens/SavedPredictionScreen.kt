@@ -293,7 +293,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     item.overripe.toDouble(),
                     item.ripe.toDouble(),
                     item.underripe.toDouble()
-                ), white=true)
+                ), white=false)
 
                 Spacer(modifier = Modifier.height(16.dp))
 

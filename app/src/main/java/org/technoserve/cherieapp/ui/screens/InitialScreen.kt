@@ -62,32 +62,41 @@ fun InitialScreen(
 ) {
     val context = LocalContext.current
     val sharedPreferences = remember { getSharedPreferences(context) }
-    val selected_country = readCountry(sharedPreferences)
+    val selectedCountry = readCountry(sharedPreferences)
+    val modelDir = File(context.filesDir, "model")
+
+    // Retrieve the saved download percentage on initial screen load
+    downloadPercentage.value = getSavedDownloadPercentage(context)
+
     LaunchedEffect(Unit) {
-        Log.d(TAG,selected_country)
+        Log.d(TAG, selectedCountry)
+        // Initiate your download and track progress
+        // Call startDownload() here with proper parameters
     }
 
-    // UI code that depends on the fetched data
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if(selected_country=="Guatemala" || selected_country=="Honduras" || selected_country=="Ethiopia"  || selected_country=="Rwanda" ){
-                if(selected_country=="Guatemala" || selected_country=="Honduras" || selected_country=="Ethiopia"){
+            if (downloadPercentage.value == 100) {
+
+                // Check if a valid country is selected
+                if (selectedCountry == "Guatemala" || selectedCountry == "Honduras" || selectedCountry == "Ethiopia") {
                     navController.navigate(NavigationItem.Inference.route)
-                }else{
+                } else if (selectedCountry == "Rwanda") {
                     navController.navigate(NavigationItem.ChooseImage.route)
                 }
-
-            }
-            else{
+            } else {
+                // Show SelectCountry if the download is incomplete
                 SelectCountry(scaffoldState = scaffoldState, homeScope = homeScope, navController = navController)
             }
         }
+
     }
 }
+
 
 
 @Composable
@@ -107,194 +116,208 @@ fun SelectCountry(
     val sharedPreferences = remember { getSharedPreferences(context) }
     val modelDir = File(context.filesDir, "model")
     modelDir.mkdirs()
-        Box(
-            contentAlignment = Alignment.TopCenter,
-            modifier= Modifier
-                .width(screenWidth * 0.8f)
-                .shadow(
-                    if (isDarkMode) Color.Black else Color(0xFFced4da),
-                    borderRadius = 7.dp,
-                    offsetX = 2.dp,
-                    offsetY = 2.dp,
-                    spread = 3.dp,
-                    blurRadius = 20.dp
-                )
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
+    Box(
+        contentAlignment = Alignment.TopCenter,
+        modifier= Modifier
+            .width(screenWidth * 0.8f)
+            .shadow(
+                if (isDarkMode) Color.Black else Color(0xFFced4da),
+                borderRadius = 7.dp,
+                offsetX = 2.dp,
+                offsetY = 2.dp,
+                spread = 3.dp,
+                blurRadius = 20.dp
+            )
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
 //                    .height(screenHeight * 0.5f)
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
 
-                if (downloading.value) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        LinearProgressIndicator()
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Text(
-                            text = "${stringResource(id = R.string.downloading_model)}...",
-                            color = Color.Black,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
-                } else {
-                    Text(
-                        text = stringResource(id = R.string.select_country),
-                        style = MaterialTheme.typography.h4,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(50.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CustomSpinner(
-                            availableQuantities = options,
-                            selectedItem = selected.value,
-                            onItemSelected = { s ->
-                                selected.value = s;
-                            })
-                    }
+            if (downloading.value) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    LinearProgressIndicator()
                     Spacer(modifier = Modifier.height(32.dp))
-                    Button(
-                        onClick = {
-                            if (selected.value.lowercase() == "ethiopia"){
-                                downloading.value = true
-                                val detectionModelRef =
-                                    Firebase.storage.reference.child("models/${selected.value.lowercase()}/mobile_model_b4_nms.ptl")
-                                val classifierModelRef =
-                                    Firebase.storage.reference.child("models/${selected.value.lowercase()}/classifier.pt")
-                                // create directory for model files
-//                            val mainModelDir = File(modelDir, "model")
-                                val detectionModelFile = File(modelDir, "${selected.value.lowercase()}_mobile_model_b4_nms.ptl")
-                                val classifierModelFile = File(modelDir, "${selected.value.lowercase()}_classifier.pt")
-                                saveCountry(
-                                    sharedPreferences,
-                                    selected.value
-                                );
+                    Text(
+                        text = "${stringResource(id = R.string.downloading_model)}...",
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "${stringResource(id = R.string.Percentage_download_model)}... ${downloadPercentage.value}%",
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            } else {
+                Text(
+                    text = stringResource(id = R.string.select_country),
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(50.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CustomSpinner(
+                        availableQuantities = options,
+                        selectedItem = selected.value,
+                        onItemSelected = { s ->
+                            selected.value = s;
+                        })
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = {
+                        if (selected.value.lowercase() == "ethiopia") {
+                            downloading.value = true
+                            val detectionModelRef =
+                                Firebase.storage.reference.child("models/${selected.value.lowercase()}/mobile_model_b4_nms.ptl")
+                            val classifierModelRef =
+                                Firebase.storage.reference.child("models/${selected.value.lowercase()}/classifier.pt")
 
-                                var modelPaths = listOf(
-                                    Pair(detectionModelRef, detectionModelFile),
-                                    Pair(classifierModelRef, classifierModelFile)
-                                )
+                            // Create directory for model files
+                            val detectionModelFile = File(modelDir, "${selected.value.lowercase()}_mobile_model_b4_nms.ptl")
+                            val classifierModelFile = File(modelDir, "${selected.value.lowercase()}_classifier.pt")
+                            saveCountry(sharedPreferences, selected.value)
 
-                                var loaded_items = 0
+                            val modelPaths = listOf(
+                                Pair(detectionModelRef, detectionModelFile),
+                                Pair(classifierModelRef, classifierModelFile)
+                            )
 
-                                for (modelPath in modelPaths) {
-                                    val modelRef = modelPath.first
-                                    val modelFile = modelPath.second
-                                    modelRef.downloadUrl.addOnSuccessListener {
-                                        modelRef.getFile(modelFile).addOnSuccessListener {
-                                            Log.d("download test", "successfull :-)")
+                            var loaded_items = 0
 
-                                            val modelPath = modelFile.absolutePath
-                                            Log.d("retrieve test", modelPath)
+                            for (modelPath in modelPaths) {
+                                val modelRef = modelPath.first
+                                val modelFile = modelPath.second
 
-                                            loaded_items += 1
-                                            if (loaded_items == modelPaths.size) {
-                                                downloading.value = false
-                                                navController.navigate(NavigationItem.Inference.route)
-                                            }
-                                        }.addOnFailureListener { exception ->
-                                            downloading.value = false
-                                            homeScope.launch {
-                                                scaffoldState.snackbarHostState.showSnackbar(
-                                                    exception.message ?: "Unkown error... download failed"
-                                                )
-                                            }
-                                            Log.d(
-                                                "download test",
-                                                exception.message ?: "Unkown error... download failed"
-                                            )
-                                        }
-
-                                    }.addOnFailureListener {
-                                        navController.navigate(NavigationItem.ChooseImage.route)
-                                    }
-                                }
-                            }else{
-                                downloading.value = true
-                                val modelRef =
-                                    Firebase.storage.reference.child("models/${selected.value.lowercase()}.ptl")
-                                val modelFile = File(modelDir, "${selected.value.lowercase()}.ptl")
-                                saveCountry(
-                                    sharedPreferences,
-                                    selected.value
-                                );
                                 modelRef.downloadUrl.addOnSuccessListener {
                                     modelRef.getFile(modelFile).addOnSuccessListener {
+                                        Log.d("download test", "successful :-)")
+                                        loaded_items += 1
 
-                                        Log.d("download test", "successfull :-)")
-                                        val modelPath = modelFile.absolutePath
-                                        Log.d("retrieve test", modelPath)
-                                        downloading.value = false
-                                        navController.navigate(NavigationItem.Inference.route)
+                                        // Update the UI or state to show progress percentage
+                                        updateDownloadPercentage(loaded_items, modelPaths.size,context)
+
+                                        if (loaded_items == modelPaths.size) {
+                                            downloading.value = false
+                                            navController.navigate(NavigationItem.Inference.route)
+                                        }
+                                    }.addOnProgressListener { taskSnapshot ->
+                                        val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
+                                        Log.d("Download Progress", "File: ${modelFile.name} is $progress% downloaded")
+                                        // Update the UI with the current download percentage
+                                        // For example, you could store it in a state variable
+                                        updateDownloadPercentage(taskSnapshot.bytesTransferred.toInt(), taskSnapshot.totalByteCount.toInt(), context)
                                     }.addOnFailureListener { exception ->
                                         downloading.value = false
                                         homeScope.launch {
                                             scaffoldState.snackbarHostState.showSnackbar(
-                                                exception.message ?: "Unkown error... download failed"
+                                                exception.message ?: "Unknown error... download failed"
                                             )
                                         }
-                                        Log.d(
-                                            "download test",
-                                            exception.message ?: "Unkown error... download failed"
-                                        )
+                                        Log.d("download test", exception.message ?: "Unknown error... download failed")
                                     }
-
                                 }.addOnFailureListener {
                                     navController.navigate(NavigationItem.ChooseImage.route)
                                 }
                             }
 
+                        }else{
+                            downloading.value = true
+                            val modelRef =
+                                Firebase.storage.reference.child("models/${selected.value.lowercase()}.ptl")
+                            val modelFile = File(modelDir, "${selected.value.lowercase()}.ptl")
+                            saveCountry(
+                                sharedPreferences,
+                                selected.value
+                            );
+                            modelRef.downloadUrl.addOnSuccessListener {
+                                modelRef.getFile(modelFile).addOnSuccessListener {
 
-                        },
-                        modifier = Modifier.requiredWidth(240.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 4.dp,
-                            disabledElevation = 0.dp
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.save),
-                            modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(id = R.string.collaboration_details),
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center,
-                        color = Color.Black,
-                        style = typography.caption,
+                                    Log.d("download test", "successfull :-)")
+                                    val modelPath = modelFile.absolutePath
+                                    Log.d("retrieve test", modelPath)
+                                    downloading.value = false
+                                    navController.navigate(NavigationItem.Inference.route)
+                                }.addOnFailureListener { exception ->
+                                    downloading.value = false
+                                    homeScope.launch {
+                                        scaffoldState.snackbarHostState.showSnackbar(
+                                            exception.message ?: "Unkown error... download failed"
+                                        )
+                                    }
+                                    Log.d(
+                                        "download test",
+                                        exception.message ?: "Unkown error... download failed"
+                                    )
+                                }
+
+                            }.addOnFailureListener {
+                                navController.navigate(NavigationItem.ChooseImage.route)
+                            }
+                        }
+
+
+                    },
+                    modifier = Modifier.requiredWidth(240.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 4.dp,
+                        disabledElevation = 0.dp
                     )
-
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.save),
+                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(id = R.string.collaboration_details),
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center,
+                    color = Color.Black,
+                    style = typography.caption,
+                )
 
             }
+
         }
     }
+}
 
 
 
 private fun getSharedPreferences(context: Context): SharedPreferences {
     return context.getSharedPreferences("country_preference", Context.MODE_PRIVATE)
+}
+private val downloadPercentage = mutableStateOf(0)
+
+private fun updateDownloadPercentage(current: Int, total: Int,context: Context) {
+    val percentage = (current * 100) / total
+    downloadPercentage.value = percentage
+    saveDownloadPercentage(context, percentage) // Save the percentage
+    Log.d("Download Percentage", "Download is at $percentage%")
 }
 
 private fun saveCountry(sharedPreferences: SharedPreferences, country: String) {
@@ -306,4 +329,14 @@ private fun saveCountry(sharedPreferences: SharedPreferences, country: String) {
 
 private fun readCountry(sharedPreferences: SharedPreferences): String {
     return sharedPreferences.getString("country", "") ?: ""
+}
+private fun saveDownloadPercentage(context: Context, percentage: Int) {
+    val sharedPreferences = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+    sharedPreferences.edit().putInt("download_percentage", percentage).apply()
+}
+
+// Functionz to get the saved download percentage from SharedPreferences
+private fun getSavedDownloadPercentage(context: Context): Int {
+    val sharedPreferences = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+    return sharedPreferences.getInt("download_percentage", 0) // Default to 0 if not found
 }

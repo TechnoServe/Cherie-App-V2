@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +31,7 @@ import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import org.technoserve.cherieapp.helpers.getPermissionsText
 import org.technoserve.cherieapp.ui.navigation.BottomNavigationBar
+import org.technoserve.cherieapp.ui.navigation.NavigationItem
 import org.technoserve.cherieapp.ui.screens.Navigation
 
 @ExperimentalFoundationApi
@@ -57,6 +60,17 @@ class MainActivity : ComponentActivity() {
 
 
                 }
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
+                // Intercept the back press only if the user is on the Home screen
+                if (currentRoute == NavigationItem.Inference.route) {
+                    BackHandler {
+                        // Exit the app if the back button is pressed on Home screen
+                        finish()
+                    }
+                }
+
 
                 Surface(color = MaterialTheme.colors.background) {
                     PermissionsWrapper(

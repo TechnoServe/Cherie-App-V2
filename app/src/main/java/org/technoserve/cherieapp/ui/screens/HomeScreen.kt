@@ -90,6 +90,7 @@ fun Navigation(
             )
         }
         composable(NavigationItem.ChooseImage.route) {
+
             ChooseImageScreen(
                 scaffoldState = scaffoldState,
                 homeScope = homeScope,

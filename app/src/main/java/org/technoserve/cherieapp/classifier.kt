@@ -3,6 +3,7 @@ package org.technoserve.cherieapp
 import android.content.Context
 import android.graphics.*
 import android.util.Log
+import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -23,6 +24,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 import android.graphics.RectF
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.toLowerCase
 import androidx.core.graphics.scale
 
@@ -196,6 +198,9 @@ class BeanClassifier(
 
     init {
         val modelDir = File(context.filesDir, "model")
+        if (!modelDir.exists()) {
+            modelDir.mkdirs()
+        }
 //        val destDir = File(modelDir, )
         val destDirClassifier = File(modelDir, country.lowercase()+"_"+"classifier.pt")
         val destDirDetect = File(modelDir, country.lowercase()+"_"+"mobile_model_b4_nms.ptl")
@@ -481,47 +486,60 @@ class BeanClassifier(
 //        val inputTensor = Tensor.fromBlob(floatArrayList, longArrayOf(batch.size.toLong(), 3, 128, 128))
 //
 //    }
-    private suspend fun classifyBeans(inputs: List<Tensor>, scores: List<Float>): List<Int> = withContext(Dispatchers.Default) {
-        // batch inference, merge them into batches of 24
-        var results = mutableListOf<Int>()
-    var _results = inputs.zip(scores).map {
+private suspend fun classifyBeans(inputs: List<Tensor>, scores: List<Float>): List<Int> = withContext(Dispatchers.Default) {
+    // batch inference, merge them into batches of 24
+    val results = mutableListOf<Int>()
+    val _results = inputs.zip(scores).map {
         async {
-            var result = Pair(classifierModel.forward(IValue.from(it.first)).toTensor(), it.second)
-            print("Scannned an image")
-            return@async result;
+            try {
+                val result = Pair(classifierModel.forward(IValue.from(it.first)).toTensor(), it.second)
+                print("Scanned an image")
+                return@async result
+            } catch (e: Exception) {
+                // Log the error for debugging
+                Log.e("BeanClassifier", "Error during classification: ${e.message}")
+
+                // Optionally notify the user
+                withContext(Dispatchers.Main) {
+                    Toast.makeText( context,"An error occurred while classifying the image.", Toast.LENGTH_SHORT).show()
+                }
+
+                // Return null to indicate an error occurred
+                return@async null
+            }
         }
     }.awaitAll()
 
-    for ((output, scoreItm) in _results) {
+    // Filter out any null results if an error occurred
+    val filteredResults = _results.filterNotNull()
+
+    for ((output, scoreItm) in filteredResults) {
         val outputData = output.dataAsFloatArray
         for (bi in 0 until output.shape()[0].toInt()) {
             val outputStart = bi * 4
             val outputEnd = outputStart + 4
             val outputSlice = outputData.sliceArray(outputStart until outputEnd)
             val maxIndex = outputSlice.indices.maxByOrNull { outputSlice[it] } ?: 0
-//            results.add(maxIndex)
-            if (maxIndex == 3){
-                if (scoreItm >= 0.2f){
+
+            if (maxIndex == 3) {
+                if (scoreItm >= 0.2f) {
                     // find second max
                     val maxIndex2 = outputSlice.indices.sortedByDescending { outputSlice[it] }.get(1)
                     results.add(maxIndex2)
-                }else{
+                } else {
                     results.add(maxIndex)
                 }
-            }else{
+            } else {
                 if (outputSlice[3] > 0.2f && scoreItm < 0.10f) {
                     results.add(3)
-                }else{
+                } else {
                     results.add(maxIndex)
                 }
-
             }
-
         }
     }
-        return@withContext results
-    }
-
+    return@withContext results
+}
 
 
     private fun drawDetections(bitmap: Bitmap, detections: List<Pair<Triple<Pair<Bitmap,Tensor>, RectF, Float>, Int>>): Bitmap {

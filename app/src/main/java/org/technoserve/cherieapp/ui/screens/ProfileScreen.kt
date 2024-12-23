@@ -11,7 +11,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -99,6 +101,9 @@ fun ProfileScreen(
             // sign-in flow using the back button. Otherwise check
             // response.getError().getErrorCode() and handle the error.
             // ...
+            val errorCode = response?.error?.errorCode
+            val errorMessage = response?.error?.message
+            Log.e("FirebaseAuthError", "Sign-in error code: $errorCode, message: $errorMessage")
             homeScope.launch {
                 scaffoldState.snackbarHostState.showSnackbar(loginFailedMsg)
             }
@@ -153,9 +158,11 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 32.dp)
-                .background(MaterialTheme.colors.background),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(top = 20.dp)
+            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colors.background),
+
+        horizontalAlignment = Alignment.CenterHorizontally,
         ) {
 
             if (user == null) {

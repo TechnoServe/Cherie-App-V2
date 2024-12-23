@@ -88,7 +88,8 @@ fun SavedPredictionsScreen(
     fun refreshListItems() {
         // TODO: update saved predictions list when db gets updated
         //  currently using a terrible makeshift solution
-        navController.navigate(NavigationItem.Inference.route)
+        navController.navigate(NavigationItem.Logs.route)
+        // navController.navigate(NavigationItem.Inference.route)
         navController.navigate(NavigationItem.Logs.route) {
             navController.graph.startDestinationRoute?.let { route ->
                 popUpTo(route) {
